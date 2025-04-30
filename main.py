@@ -30,55 +30,65 @@ crec_date = st.date_input("Congressional Record date", YESTERDAY, format="YYYY-M
 package_id = f"CREC-{crec_date}"
 granules_url = f"{GPO_API_PACKAGES_URL}/{package_id}/granules?pageSize={PAGE_SIZE}&offsetMark={OFFSET_MARK}"
 
-response = httpx.get(granules_url, headers=HEADERS)
-gpo_data = response.json()
-granules = gpo_data["granules"]
 
-if not granules:
-    st.header("No CREC today")
-else:
-    bills = [
-        granule
-        for granule in response.json()["granules"]
-        if granule["title"].startswith("Constitutional Authority Statement for ")
-    ]
+@st.cache_data
+def report(granules_url):
+    response = httpx.get(granules_url, headers=HEADERS)
+    gpo_data = response.json()
+    granules = gpo_data["granules"]
 
-    for bill in bills:
-        cite = bill["title"].partition("for ")[2].replace(".", "").replace(" ", "")
-        bill_type, bill_num, _ = re.split(r"(\d+)", cite)
-        bill_type = bill_type.lower()
-        bill["cdg_api_url"] = (
-            f"{CDG_API_BILL_URL}/{CURRENT_CONGRESS}/{bill_type}/{bill_num}?format=json"
-        )
-        bill["cdg_url"] = f"{CDG_BILL_URL}/{CURRENT_CONGRESS}/{bill_type}/{bill_num}"
-        response = httpx.get(
-            bill["cdg_api_url"],
-            headers=HEADERS,
-        )
-        bill_obj = response.json().get("bill")
-        bill["cas"] = (
-            bill_obj.get("constitutionalAuthorityStatementText") if bill_obj else None
-        )
+    if not granules:
+        st.header("No CREC today")
+    else:
+        bills = [
+            granule
+            for granule in response.json()["granules"]
+            if granule["title"].startswith("Constitutional Authority Statement for ")
+        ]
 
-        df = (
-            pl.from_dicts(bills)
-            .select(
-                pl.col("title"),
-                pl.col("granuleId"),
-                pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
-                pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
-                pl.col("cdg_url"),
-                pl.col("cas"),
+        for bill in bills:
+            cite = bill["title"].partition("for ")[2].replace(".", "").replace(" ", "")
+            bill_type, bill_num, _ = re.split(r"(\d+)", cite)
+            bill_type = bill_type.lower()
+            bill["cdg_api_url"] = (
+                f"{CDG_API_BILL_URL}/{CURRENT_CONGRESS}/{bill_type}/{bill_num}?format=json"
             )
-            .sort("title")
+            bill["cdg_url"] = (
+                f"{CDG_BILL_URL}/{CURRENT_CONGRESS}/{bill_type}/{bill_num}"
+            )
+            response = httpx.get(
+                bill["cdg_api_url"],
+                headers=HEADERS,
+            )
+            bill_obj = response.json().get("bill")
+            bill["cas"] = (
+                bill_obj.get("constitutionalAuthorityStatementText")
+                if bill_obj
+                else None
+            )
+
+            df = (
+                pl.from_dicts(bills)
+                .select(
+                    pl.col("title"),
+                    pl.col("granuleId"),
+                    pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
+                    pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
+                    pl.col("cdg_url"),
+                    pl.col("cas"),
+                )
+                .sort("title")
+            )
+
+        st.dataframe(
+            df,
+            use_container_width=True,
+            column_config={
+                "granuleLink": st.column_config.LinkColumn(),
+                "cdg_api_url": st.column_config.LinkColumn(),
+                "cdg_url": st.column_config.LinkColumn(),
+            },
         )
 
-    st.dataframe(
-        df,
-        use_container_width=True,
-        column_config={
-            "granuleLink": st.column_config.LinkColumn(),
-            "cdg_api_url": st.column_config.LinkColumn(),
-            "cdg_url": st.column_config.LinkColumn(),
-        },
-    )
+
+report(granules_url)
