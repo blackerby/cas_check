@@ -1,5 +1,6 @@
 from datetime import date, timedelta
 import os
+import re
 
 import httpx
 import polars as pl
@@ -37,16 +38,15 @@ if not granules:
     st.header("No CREC today")
 else:
     bills = [
-        # granule["title"].partition("for ")[2].replace(".", "").split()
         granule
         for granule in response.json()["granules"]
         if granule["title"].startswith("Constitutional Authority Statement for ")
     ]
 
     for bill in bills:
-        bill_type, bill_num = (
-            bill["title"].partition("for ")[2].replace(".", "").split()
-        )
+        cite = bill["title"].partition("for ")[2].replace(".", "").replace(" ", "")
+        bill_type, bill_num, _ = re.split(r"(\d+)", cite)
+        bill_type = bill_type.lower()
         bill["cdg_api_url"] = (
             f"{CDG_API_BILL_URL}/{CURRENT_CONGRESS}/{bill_type}/{bill_num}?format=json"
         )
@@ -56,7 +56,9 @@ else:
             headers=HEADERS,
         )
         bill_obj = response.json().get("bill")
-        bill["cas"] = bill_obj.get("constitutionalAuthorityStatementText")
+        bill["cas"] = (
+            bill_obj.get("constitutionalAuthorityStatementText") if bill_obj else None
+        )
 
         df = (
             pl.from_dicts(bills)
