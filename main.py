@@ -35,16 +35,16 @@ granules_url = f"{GPO_API_PACKAGES_URL}/{package_id}/granules?pageSize={PAGE_SIZ
 def report(granules_url):
     response = httpx.get(granules_url, headers=HEADERS)
     gpo_data = response.json()
-    granules = gpo_data["granules"]
+    granules = gpo_data.get("granules")
 
     if not granules:
         st.header("No CREC today")
     else:
-        bills = [
-            granule
-            for granule in response.json()["granules"]
-            if granule["title"].startswith("Constitutional Authority Statement for ")
-        ]
+        bills = []
+        for granule in granules:
+            title = granule["title"]
+            if title and title.startswith("Constitutional Authority Statement for "):
+                bills.append(granule)
 
         for bill in bills:
             cite = bill["title"].partition("for ")[2].replace(".", "").replace(" ", "")
