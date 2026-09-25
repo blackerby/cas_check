@@ -67,28 +67,31 @@ def report(granules_url):
                 else None
             )
 
-        df = (
-            pl.from_dicts(bills)
-            .select(
-                pl.col("title"),
-                pl.col("granuleId"),
-                pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
-                pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
-                pl.col("cdg_url"),
-                pl.col("cas"),
+            df = (
+                pl.from_dicts(bills)
+                .select(
+                    pl.col("title"),
+                    pl.col("granuleId"),
+                    pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
+                    pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
+                    pl.col("cdg_url"),
+                    pl.col("cas"),
+                )
+                .sort("title")
             )
-            .sort("title")
-        )
 
-        st.dataframe(
-            df,
-            use_container_width=True,
-            column_config={
-                "granuleLink": st.column_config.LinkColumn(),
-                "cdg_api_url": st.column_config.LinkColumn(),
-                "cdg_url": st.column_config.LinkColumn(),
-            },
-        )
+        if not bills:
+            st.header("No Constitutional Authority Statements today")
+        else:
+            st.dataframe(
+                df,
+                use_container_width=True,
+                column_config={
+                    "granuleLink": st.column_config.LinkColumn(),
+                    "cdg_api_url": st.column_config.LinkColumn(),
+                    "cdg_url": st.column_config.LinkColumn(),
+                },
+            )
 
 
 report(granules_url)
