@@ -80,15 +80,15 @@ def report(granules_url):
                 .sort("title")
             )
 
-        st.dataframe(
-            df,
-            use_container_width=True,
-            column_config={
-                "granuleLink": st.column_config.LinkColumn(),
-                "cdg_api_url": st.column_config.LinkColumn(),
-                "cdg_url": st.column_config.LinkColumn(),
-            },
-        )
+            st.dataframe(
+                df,
+                use_container_width=True,
+                column_config={
+                    "granuleLink": st.column_config.LinkColumn(),
+                    "cdg_api_url": st.column_config.LinkColumn(),
+                    "cdg_url": st.column_config.LinkColumn(),
+                },
+            )
 
 
 report(granules_url)
