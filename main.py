@@ -40,7 +40,6 @@ def report(granules_url):
     if not granules:
         st.header("No CREC today")
     else:
-        df = pl.DataFrame()
         bills = []
         for granule in granules:
             title = granule["title"]
@@ -68,18 +67,18 @@ def report(granules_url):
                 else None
             )
 
-            df = (
-                pl.from_dicts(bills)
-                .select(
-                    pl.col("title"),
-                    pl.col("granuleId"),
-                    pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
-                    pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
-                    pl.col("cdg_url"),
-                    pl.col("cas"),
-                )
-                .sort("title")
+        df = (
+            pl.from_dicts(bills)
+            .select(
+                pl.col("title"),
+                pl.col("granuleId"),
+                pl.concat_str(pl.col("granuleLink"), pl.lit("?api_key=DEMO_KEY")),
+                pl.concat_str(pl.col("cdg_api_url"), pl.lit("&api_key=DEMO_KEY")),
+                pl.col("cdg_url"),
+                pl.col("cas"),
             )
+            .sort("title")
+        )
 
         st.dataframe(
             df,
